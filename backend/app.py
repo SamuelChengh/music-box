@@ -1,9 +1,9 @@
 import os
-import shutil
-import tempfile
-from flask import Flask, request, jsonify
+import requests
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from musicdl import musicdl
+from urllib.parse import quote
 
 app = Flask(__name__)
 CORS(app)
@@ -28,7 +28,7 @@ class MusicClientWrapper:
             
             init_cfg = {}
             for s in sources:
-                init_cfg[s] = {'search_size_per_source': 50}
+                init_cfg[s] = {'search_size_per_source': 30}
             
             client = musicdl.MusicClient(
                 music_sources=sources,
@@ -138,32 +138,25 @@ def lyrics():
 def download():
     data = request.json
     song_info = data.get('song_info', {})
-    quality = data.get('quality', '320k')
-    save_dir = data.get('save_dir')
-    
-    if not save_dir:
-        return jsonify({'error': '请选择保存目录'}), 400
     
     try:
         download_url = song_info.get('download_url')
         if not download_url:
             return jsonify({'error': '无法获取下载链接'}), 400
         
-        import requests
-        
         filename = f"{song_info.get('artist', 'Unknown')} - {song_info.get('name', 'Unknown')}"
         ext = download_url.split('.')[-1].split('?')[0] or 'flac'
-        dest_path = os.path.join(save_dir, f"{filename}.{ext}")
         
-        os.makedirs(save_dir, exist_ok=True)
-        
-        response = requests.get(download_url, stream=True)
-        with open(dest_path, 'wb') as f:
+        def generate():
+            response = requests.get(download_url, stream=True)
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
-                    f.write(chunk)
+                    yield chunk
         
-        return jsonify({'success': True, 'path': dest_path})
+        response = Response(generate(), content_type='application/octet-stream')
+        response.headers['Content-Disposition'] = f"attachment; filename={quote(filename)}.{quote(ext)}"
+        return response
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

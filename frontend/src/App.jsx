@@ -26,7 +26,7 @@ function App() {
   })
   
   const [keyword, setKeyword] = useState('')
-  const [source, setSource] = useState('')
+  const [source, setSource] = useState('NeteaseMusicClient')
   const [songs, setSongs] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -41,6 +41,10 @@ function App() {
   const [currentLyricIndex, setCurrentLyricIndex] = useState(-1)
   const [toast, setToast] = useState(null)
   const [playlist, setPlaylist] = useState([])
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [qualityModal, setQualityModal] = useState({ show: false, song: null })
+  const listRef = useRef(null)
   
   const audioRef = useRef(null)
   const searchInputRef = useRef(null)
@@ -118,15 +122,35 @@ function App() {
     }
   }, [volume])
 
+  useEffect(() => {
+    const listElement = listRef.current
+    if (!listElement) return
+    
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = listElement
+      if (scrollTop + clientHeight >= scrollHeight - 50) {
+        handleLoadMore()
+      }
+    }
+    
+    listElement.addEventListener('scroll', handleScroll)
+    return () => listElement.removeEventListener('scroll', handleScroll)
+  }, [hasMore, loadingMore, page])
+
   const showToast = (message) => {
     setToast(message)
     setTimeout(() => setToast(null), 3000)
   }
 
-  const search = useCallback(async (pageNum = 1) => {
+  const search = useCallback(async (pageNum = 1, isLoadMore = false) => {
     if (!keyword.trim()) return
     
-    setLoading(true)
+    if (isLoadMore) {
+      setLoadingMore(true)
+    } else {
+      setLoading(true)
+    }
+    
     try {
       const res = await axios.post(`${API_BASE}/search`, {
         keyword: keyword.trim(),
@@ -134,24 +158,36 @@ function App() {
         page_size: 10,
         source: source || null
       })
-      setSongs(res.data.songs || [])
+      
+      const newSongs = res.data.songs || []
+      const currentCount = isLoadMore ? songs.length + newSongs.length : newSongs.length
+      
+      if (isLoadMore) {
+        setSongs(prev => [...prev, ...newSongs])
+      } else {
+        setSongs(newSongs)
+      }
       setTotal(res.data.total || 0)
       setPage(res.data.page || 1)
+      setHasMore(currentCount < res.data.total)
     } catch (err) {
       showToast('搜索失败: ' + (err.response?.data?.error || err.message))
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }, [keyword, source])
 
-  const handleSearch = () => search(1)
-
-  const handlePageChange = (newPage) => {
-    const maxPage = Math.ceil(total / 10)
-    if (newPage >= 1 && newPage <= maxPage) {
-      search(newPage)
-    }
+  const handleSearch = () => {
+    setHasMore(true)
+    search(1)
   }
+
+  const handleLoadMore = useCallback(() => {
+    if (!loadingMore && hasMore && keyword.trim()) {
+      search(page + 1, true)
+    }
+  }, [loadingMore, hasMore, page, keyword, search])
 
   const playSong = async (song, index) => {
     try {
@@ -215,49 +251,43 @@ function App() {
     playSong(playlist[prevIndex], prevIndex)
   }
 
-  const handleDownload = async (song) => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.webkitdirectory = true
-    input.style.display = 'none'
-    document.body.appendChild(input)
+  const handleDownload = (song) => {
+    setQualityModal({ show: true, song })
+  }
+  
+  const confirmDownload = async (qualityValue) => {
+    const song = qualityModal.song
+    setQualityModal({ show: false, song: null })
     
-    input.onchange = async (e) => {
-      const files = e.target.files
-      if (!files || files.length === 0) {
-        document.body.removeChild(input)
-        return
-      }
+    if (!song) return
+    
+    try {
+      showToast('开始下载...')
       
-      const saveDir = files[0].webkitRelativePath.split('/')[0]
-      if (!saveDir) {
-        showToast('请选择有效的保存目录')
-        document.body.removeChild(input)
-        return
-      }
+      const downloadUrl = `${API_BASE}/download`
+      const filename = `${song.artist || 'Unknown'} - ${song.name || 'Unknown'}.${qualityValue || 'mp3'}`
       
-      document.body.removeChild(input)
+      const response = await axios.post(downloadUrl, {
+        song_info: song,
+        quality: qualityValue,
+        save_dir: '/tmp'
+      }, {
+        responseType: 'blob'
+      })
       
-      try {
-        const homeDir = '/Users/huai.ch'
-        const fullPath = `${homeDir}/${saveDir}`
-        
-        showToast('开始下载...')
-        const res = await axios.post(`${API_BASE}/download`, {
-          song_info: song,
-          quality,
-          save_dir: fullPath
-        })
-        
-        if (res.data.success) {
-          showToast('下载成功')
-        }
-      } catch (err) {
-        showToast('下载失败: ' + (err.response?.data?.error || err.message))
-      }
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', filename)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      
+      showToast('下载成功')
+    } catch (err) {
+      showToast('下载失败: ' + (err.response?.data?.error || err.message))
     }
-    
-    input.click()
   }
 
   const handleTimeUpdate = () => {
@@ -281,16 +311,18 @@ function App() {
   }
   
   useEffect(() => {
-    if (lyricsRef.current && currentLyricIndex >= 0) {
-      const lyricElements = lyricsRef.current.querySelectorAll('.lyric-line')
-      if (lyricElements[currentLyricIndex]) {
-        lyricElements[currentLyricIndex].scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        })
-      }
+    if (lyricsRef.current && currentLyricIndex >= 0 && lyrics.length > 0) {
+      requestAnimationFrame(() => {
+        const lyricElements = lyricsRef.current.querySelectorAll('.lyric-line')
+        if (lyricElements[currentLyricIndex]) {
+          lyricElements[currentLyricIndex].scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          })
+        }
+      })
     }
-  }, [currentLyricIndex])
+  }, [currentLyricIndex, lyrics.length])
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
@@ -409,7 +441,7 @@ function App() {
             )}
           </div>
           
-          <div className="flex-1 overflow-y-auto">
+          <div ref={listRef} className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center h-40">
                 <svg className="w-8 h-8 text-primary animate-spin" fill="none" viewBox="0 0 24 24">
@@ -430,7 +462,7 @@ function App() {
                   <li
                     key={`${song.song_id}-${index}`}
                     onClick={() => playSong(song, index)}
-                    className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                    className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
                       currentSong?.song_id === song.song_id ? 'bg-pink-50 dark:bg-pink-900/20' : ''
                     }`}
                   >
@@ -443,6 +475,15 @@ function App() {
                         (page-1)*10 + index + 1
                       )}
                     </span>
+                    {song.album_img ? (
+                      <img src={song.album_img} alt="cover" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                        </svg>
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="truncate text-light-text dark:text-dark-text font-medium">{song.name}</p>
                       <p className="truncate text-sm text-light-muted dark:text-dark-muted">{song.artist}</p>
@@ -462,38 +503,24 @@ function App() {
                 ))}
               </ul>
             )}
+            
+            {/* Load More / No More Data */}
+            {songs.length > 0 && (
+              <div className="py-4 text-center text-sm text-light-muted dark:text-dark-muted">
+                {loadingMore ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    <span>加载中...</span>
+                  </div>
+                ) : !hasMore ? (
+                  <span>暂无更多数据</span>
+                ) : null}
+              </div>
+            )}
           </div>
-
-          {/* Pagination */}
-          {total > 10 && (
-            <div className="flex items-center justify-center gap-1 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => handlePageChange(page - 1)}
-                disabled={page === 1}
-                className="px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-              >
-                &lt;
-              </button>
-              {Array.from({ length: Math.ceil(total / 10) }, (_, i) => i + 1).map(p => (
-                <button
-                  key={p}
-                  onClick={() => handlePageChange(p)}
-                  className={`px-3 py-1 rounded ${
-                    p === page ? 'bg-primary text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-              <button
-                onClick={() => handlePageChange(page + 1)}
-                disabled={page >= Math.ceil(total / 10)}
-                className="px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-              >
-                &gt;
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Right Content - Player & Lyrics */}
@@ -519,17 +546,8 @@ function App() {
             {/* Download Button */}
             {currentSong && (
               <div className="flex gap-2 mb-4">
-                <select
-                  value={quality}
-                  onChange={(e) => setQuality(e.target.value)}
-                  className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-light-bg dark:bg-dark-bg text-sm"
-                >
-                  {QUALITY_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
                 <button
-                  onClick={() => handleDownload(currentSong)}
+                  onClick={() => handleDownload(currentSong, '320k')}
                   className="px-4 py-1.5 bg-primary text-white rounded-lg hover:bg-opacity-90 flex items-center gap-1"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -657,6 +675,41 @@ function App() {
       {toast && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 bg-dark-card text-white rounded-lg shadow-lg text-sm z-50">
           {toast}
+        </div>
+      )}
+
+      {/* Quality Select Modal */}
+      {qualityModal.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setQualityModal({ show: false, song: null })}>
+          <div className="bg-light-card dark:bg-dark-card rounded-xl p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-light-text dark:text-dark-text mb-4">请选择音质</h3>
+            <div className="space-y-3">
+              <button
+                onClick={() => confirmDownload('128k')}
+                className="w-full py-3 px-4 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-light-text dark:text-dark-text"
+              >
+                标准 (128k)
+              </button>
+              <button
+                onClick={() => confirmDownload('320k')}
+                className="w-full py-3 px-4 rounded-lg border border-primary hover:bg-primary/10 text-primary font-medium"
+              >
+                高品质 (320k)
+              </button>
+              <button
+                onClick={() => confirmDownload('flac')}
+                className="w-full py-3 px-4 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-light-text dark:text-dark-text"
+              >
+                无损 (FLAC)
+              </button>
+            </div>
+            <button
+              onClick={() => setQualityModal({ show: false, song: null })}
+              className="w-full mt-4 py-2 text-light-muted dark:text-dark-muted hover:text-light-text dark:hover:text-dark-text"
+            >
+              取消
+            </button>
+          </div>
         </div>
       )}
     </div>
