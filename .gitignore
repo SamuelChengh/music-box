@@ -1,0 +1,11 @@
+node_modules/
+__pycache__/
+.DS_Store
+musicdl_outputs/
+*.pyc
+.env
+venv/
+.venv/
+dist/
+build/
+*.log
