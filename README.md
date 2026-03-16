@@ -1,5 +1,7 @@
 # Musicbox
 
+在线音乐盒
+
 A music streaming application with backend and frontend components.
 
 ## Project Structure
