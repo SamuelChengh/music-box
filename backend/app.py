@@ -25,7 +25,15 @@ class MusicClientWrapper:
         
         if cache_key not in self.search_cache:
             sources = [source] if source else SOURCES
-            client = musicdl.MusicClient(music_sources=sources)
+            
+            init_cfg = {}
+            for s in sources:
+                init_cfg[s] = {'search_size_per_source': 50}
+            
+            client = musicdl.MusicClient(
+                music_sources=sources,
+                init_music_clients_cfg=init_cfg
+            )
             results = client.search(keyword=keyword)
             
             all_songs = []

@@ -44,6 +44,7 @@ function App() {
   
   const audioRef = useRef(null)
   const searchInputRef = useRef(null)
+  const lyricsRef = useRef(null)
 
   useEffect(() => {
     if (isDark) {
@@ -215,23 +216,48 @@ function App() {
   }
 
   const handleDownload = async (song) => {
-    try {
-      const dir = prompt('请输入保存目录路径:', '/Users/huai.ch/Music')
-      if (!dir) return
-      
-      showToast('开始下载...')
-      const res = await axios.post(`${API_BASE}/download`, {
-        song_info: song,
-        quality,
-        save_dir: dir
-      })
-      
-      if (res.data.success) {
-        showToast('下载成功: ' + res.data.path)
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.webkitdirectory = true
+    input.style.display = 'none'
+    document.body.appendChild(input)
+    
+    input.onchange = async (e) => {
+      const files = e.target.files
+      if (!files || files.length === 0) {
+        document.body.removeChild(input)
+        return
       }
-    } catch (err) {
-      showToast('下载失败: ' + (err.response?.data?.error || err.message))
+      
+      const saveDir = files[0].webkitRelativePath.split('/')[0]
+      if (!saveDir) {
+        showToast('请选择有效的保存目录')
+        document.body.removeChild(input)
+        return
+      }
+      
+      document.body.removeChild(input)
+      
+      try {
+        const homeDir = '/Users/huai.ch'
+        const fullPath = `${homeDir}/${saveDir}`
+        
+        showToast('开始下载...')
+        const res = await axios.post(`${API_BASE}/download`, {
+          song_info: song,
+          quality,
+          save_dir: fullPath
+        })
+        
+        if (res.data.success) {
+          showToast('下载成功')
+        }
+      } catch (err) {
+        showToast('下载失败: ' + (err.response?.data?.error || err.message))
+      }
     }
+    
+    input.click()
   }
 
   const handleTimeUpdate = () => {
@@ -253,6 +279,18 @@ function App() {
       setCurrentLyricIndex(idx)
     }
   }
+  
+  useEffect(() => {
+    if (lyricsRef.current && currentLyricIndex >= 0) {
+      const lyricElements = lyricsRef.current.querySelectorAll('.lyric-line')
+      if (lyricElements[currentLyricIndex]) {
+        lyricElements[currentLyricIndex].scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        })
+      }
+    }
+  }, [currentLyricIndex])
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
@@ -506,11 +544,11 @@ function App() {
           {/* Lyrics */}
           <div className="flex-1 overflow-y-auto p-4 bg-light-bg dark:bg-dark-bg">
             {lyrics.length > 0 ? (
-              <div className="text-center space-y-3 lyrics-scroll" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              <div ref={lyricsRef} className="text-center space-y-3 lyrics-scroll" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                 {lyrics.map((line, index) => (
                   <p
                     key={index}
-                    className={`transition-all ${
+                    className={`lyric-line transition-all ${
                       index === currentLyricIndex
                         ? 'text-primary font-bold text-lg scale-105'
                         : 'text-light-muted dark:text-dark-muted'
