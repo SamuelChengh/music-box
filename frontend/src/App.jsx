@@ -29,22 +29,17 @@ const THEME_COLORS = [
 function App() {
   const [themeColor, setThemeColor] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('themeColor') || '#e94560'
+      return localStorage.getItem('themeColor') || '#10B981'
     }
-    return '#e94560'
+    return '#10B981'
   })
   
   const [themeModal, setThemeModal] = useState(false)
   
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
-    }
-    return false
-  })
+  const [isDark, setIsDark] = useState(false)
   
   const [keyword, setKeyword] = useState('')
-  const [source, setSource] = useState('NeteaseMusicClient')
+  const [source, setSource] = useState('QQMusicClient')
   const [songs, setSongs] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -80,13 +75,6 @@ function App() {
       document.documentElement.classList.remove('dark')
     }
   }, [isDark])
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = (e) => setIsDark(e.matches)
-    mediaQuery.addEventListener('change', handler)
-    return () => mediaQuery.removeEventListener('change', handler)
-  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e) => {
