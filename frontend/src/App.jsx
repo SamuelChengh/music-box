@@ -375,20 +375,68 @@ function App() {
         onError={() => showToast('播放出错，将尝试切换音源')}
       />
       
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 bg-light-card dark:bg-dark-card border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${themeColor}, ${themeColor}99)` }}>
-            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-            </svg>
-          </div>
-          <h1 className="text-xl font-bold text-light-text dark:text-dark-text">MusicBox</h1>
+      {/* 免责声明 + Header */}
+      <div>
+        <div className="py-1 text-center text-sm font-bold text-orange-600 dark:text-orange-400 bg-light-card dark:bg-dark-card">
+          ⚠️ 本项目仅供个人学习使用，请支持正版 🎶
         </div>
-        <div className="flex items-center gap-2">
+
+        <header className="flex items-center gap-2 px-2 py-2 lg:py-3 bg-light-card dark:bg-dark-card border-b border-gray-200 dark:border-gray-700">
+        {/* Logo */}
+        <div className="flex-shrink-0 w-8 h-8 lg:w-9 lg:h-9 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${themeColor}, ${themeColor}99)` }}>
+          <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+          </svg>
+        </div>
+        
+        {/* 搜索输入框 */}
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          placeholder="搜索歌曲、歌手..."
+          className="flex-1 min-w-0 px-3 py-2 lg:px-4 lg:py-2 text-sm lg:text-base rounded-lg border border-gray-300 dark:border-gray-600 bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text focus:outline-none"
+        />
+        
+        {/* 平台选择 */}
+        <select
+          value={source}
+          onChange={(e) => setSource(e.target.value)}
+          className="flex-shrink-0 px-2 lg:px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-light-card dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none"
+          style={{ borderColor: themeColor }}
+        >
+          {Object.entries(SOURCE_NAMES).map(([key, name]) => (
+            <option key={key} value={key}>{name}</option>
+          ))}
+        </select>
+        
+        {/* 搜索按钮 */}
+        <button
+          onClick={handleSearch}
+          disabled={loading}
+          className="flex-shrink-0 p-2 lg:px-4 text-white rounded-lg disabled:opacity-50 flex items-center gap-1"
+          style={{ backgroundColor: themeColor }}
+        >
+          {loading ? (
+            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          )}
+          <span className="hidden lg:inline text-sm">搜索</span>
+        </button>
+        
+        {/* 主题按钮 - 带下拉 */}
+        <div className="relative">
           <button
-            onClick={() => setThemeModal(true)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            onClick={() => setThemeModal(!themeModal)}
+            className="flex-shrink-0 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
             title="选择主题颜色"
           >
             <div 
@@ -396,84 +444,54 @@ function App() {
               style={{ backgroundColor: themeColor }}
             />
           </button>
-          <button
-            onClick={() => setIsDark(!isDark)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            {isDark ? (
-              <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1z"/>
-              </svg>
-            ) : (
-              <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 17.19 14.93 19 12 19c-3.86 0-7-3.14-7-7 0-2.93 1.81-5.45 4.37-6.49zM12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
-              </svg>
-            )}
-          </button>
+          {/* 主题颜色下拉列表 */}
+          {themeModal && (
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 p-2 bg-light-card dark:bg-dark-card rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 flex flex-col gap-2 z-50">
+              {THEME_COLORS.map((color) => (
+                <button
+                  key={color.value}
+                  onClick={() => { setThemeColor(color.value); setThemeModal(false); }}
+                  className={`w-7 h-7 rounded-full transition-transform hover:scale-110 ${
+                    themeColor === color.value ? 'ring-2 ring-offset-2 ring-gray-400' : ''
+                  }`}
+                  style={{ backgroundColor: color.value }}
+                />
+              ))}
+            </div>
+          )}
         </div>
+        
+        {/* 夜间模式 */}
+        <button
+          onClick={() => setIsDark(!isDark)}
+          className="flex-shrink-0 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          {isDark ? (
+            <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1z"/>
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 17.19 14.93 19 12 19c-3.86 0-7-3.14-7-7 0-2.93 1.81-5.45 4.37-6.49zM12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.90-.10-1.36-.10z"/>
+            </svg>
+          )}
+        </button>
       </header>
-
-      {/* Search Bar */}
-      <div className="p-4 bg-light-card dark:bg-dark-card border-b border-gray-200 dark:border-gray-700">
-        <div className="flex gap-2 flex-wrap">
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="搜索歌曲、歌手..."
-            className="flex-1 min-w-[200px] px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text focus:outline-none"
-          />
-          <select
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-light-card dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none"
-            style={{ borderColor: themeColor }}
-          >
-            <option value="">全部平台</option>
-            {Object.entries(SOURCE_NAMES).map(([key, name]) => (
-              <option key={key} value={key}>{name}</option>
-            ))}
-          </select>
-            <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="px-4 py-2 text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
-              style={{ backgroundColor: themeColor }}
-            >
-            {loading ? (
-              <>
-                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
-                <span>搜索中</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
-                <span>搜索</span>
-              </>
-            )}
-          </button>
-        </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Left Sidebar - Search Results */}
-        <div className="w-full md:w-1/2 lg:w-1/2 flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-800">
-            <span className="text-sm text-light-muted dark:text-dark-muted">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Left - Search Results */}
+        <div className="flex-1 flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700">
+          {/* Results Header */}
+          <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
+            <span className="text-xs lg:text-sm text-light-muted dark:text-dark-muted">
               {total > 0 ? `${(page-1)*10+1}-${Math.min(page*10, total)} / ${total} 首` : '搜索结果'}
             </span>
             {songs.length > 0 && (
               <button
                 onClick={() => { setSongs([]); setTotal(0); setKeyword(''); }}
-                className="text-sm hover:underline"
+                className="text-xs lg:text-sm hover:underline"
                 style={{ color: themeColor }}
               >
                 清空
@@ -481,6 +499,7 @@ function App() {
             )}
           </div>
           
+          {/* Results List */}
           <div ref={listRef} className="flex-1 overflow-y-auto min-h-0">
             {loading ? (
               <div className="h-full flex items-center justify-center">
@@ -502,40 +521,37 @@ function App() {
                   <li
                     key={`${song.song_id}-${index}`}
                     onClick={() => playSong(song, index)}
-                    className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                    className={`flex items-center gap-2 lg:gap-3 px-2 lg:px-4 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
                       currentSong?.song_id === song.song_id ? 'bg-pink-50 dark:bg-pink-900/20' : ''
                     }`}
                   >
-                    <span className="w-6 text-center text-light-muted dark:text-dark-muted text-sm">
+                    <span className="w-5 lg:w-6 text-center flex-shrink-0">
                         {currentSong?.song_id === song.song_id && isPlaying ? (
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: themeColor }}>
+                          <svg className="w-3 lg:w-4 h-3 lg:h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: themeColor }}>
                             <path d="M8 5v14l11-7z"/>
                           </svg>
                       ) : (
-                        (page-1)*10 + index + 1
+                        <span className="text-xs lg:text-sm text-light-muted dark:text-dark-muted">{(page-1)*10 + index + 1}</span>
                       )}
                     </span>
                     {song.album_img ? (
-                      <img src={song.album_img} alt="cover" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                      <img src={song.album_img} alt="cover" className="w-8 h-8 lg:w-10 lg:h-10 rounded object-cover flex-shrink-0" />
                     ) : (
-                      <div className="w-10 h-10 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                      <div className="w-8 h-8 lg:w-10 lg:h-10 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                         </svg>
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="truncate text-light-text dark:text-dark-text font-medium">{song.name}</p>
-                      <p className="truncate text-sm text-light-muted dark:text-dark-muted">{song.artist}</p>
+                      <p className="truncate text-sm lg:text-base text-light-text dark:text-dark-text font-medium">{song.name}</p>
+                      <p className="truncate text-xs text-light-muted dark:text-dark-muted">{song.artist}</p>
                     </div>
-                    <span className="text-xs text-light-muted dark:text-dark-muted">
-                      {song._source ? SOURCE_NAMES[song._source] : ''}
-                    </span>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDownload(song); }}
-                      className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+                      className="p-1 lg:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0"
                     >
-                      <svg className="w-4 h-4 text-light-muted dark:text-dark-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3 lg:w-4 h-3 lg:h-4 text-light-muted dark:text-dark-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                       </svg>
                     </button>
@@ -564,20 +580,20 @@ function App() {
         </div>
 
         {/* Right Content - Player & Lyrics */}
-        <div className="w-full md:w-1/2 lg:w-1/2 flex flex-col">
+        <div className="hidden lg:flex w-full lg:w-1/2 flex-col bg-light-card dark:bg-dark-card">
           {/* Player Info */}
-          <div className="flex flex-col items-center p-3 md:p-4 bg-light-card dark:bg-dark-card border-b border-gray-200 dark:border-gray-700">
-            <div className="w-28 md:w-32 lg:w-36 h-28 md:h-32 lg:h-36 rounded-xl flex items-center justify-center shadow-lg mb-3"
+          <div className="flex flex-col items-center p-4">
+            <div className="w-36 h-36 rounded-xl flex items-center justify-center shadow-lg mb-3"
                   style={{ background: `linear-gradient(135deg, ${themeColor}, ${themeColor}99)` }}>
               {currentSong?.album_img ? (
                 <img src={currentSong.album_img} alt="cover" className="w-full h-full object-cover rounded-xl" />
               ) : (
-                <svg className="w-14 md:w-16 lg:w-18 text-white/50" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-18 text-white/50" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                 </svg>
               )}
             </div>
-            <h2 className="text-lg md:text-xl font-bold text-light-text dark:text-dark-text text-center truncate max-w-full px-2">
+            <h2 className="text-xl font-bold text-light-text dark:text-dark-text text-center truncate max-w-full px-2">
               {currentSong?.name || '未选择歌曲'}
             </h2>
             <p className="text-sm text-light-muted dark:text-dark-muted text-center truncate max-w-full px-2">
@@ -586,9 +602,9 @@ function App() {
           </div>
 
           {/* Lyrics */}
-          <div className="flex-1 overflow-y-auto p-3 md:p-4 bg-light-bg dark:bg-dark-bg">
+          <div className="flex-1 overflow-y-auto p-4">
             {lyrics.length > 0 ? (
-              <div ref={lyricsRef} className="text-center space-y-2 md:space-y-3 lyrics-scroll" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              <div ref={lyricsRef} className="text-center space-y-3 lyrics-scroll" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                 {lyrics.map((line, index) => (
                   <p
                     key={index}
@@ -619,11 +635,12 @@ function App() {
           {currentSong?.album_img ? (
             <img src={currentSong.album_img} alt="cover" className="w-10 h-10 md:w-12 md:h-12 rounded flex-shrink-0" />
           ) : (
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 md:w-6 md:h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-              </svg>
-            </div>
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: themeColor + '20' }}>
+                  <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24" style={{ color: themeColor }}>
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                  </svg>
+                </div>
           )}
           <div className="min-w-0">
             <p className="truncate text-xs md:text-sm font-medium">{currentSong?.name || '未选择歌曲'}</p>
@@ -744,38 +761,9 @@ function App() {
         </div>
       )}
 
-      {/* Theme Color Modal */}
+      {/* 点击外部关闭主题选择 */}
       {themeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setThemeModal(false)}>
-          <div className="bg-light-card dark:bg-dark-card rounded-xl p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-light-text dark:text-dark-text mb-4">选择主题颜色</h3>
-            <div className="grid grid-cols-3 gap-3">
-              {THEME_COLORS.map((color) => (
-                <button
-                  key={color.value}
-                  onClick={() => { setThemeColor(color.value); setThemeModal(false); }}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                    themeColor === color.value 
-                      ? 'scale-105' 
-                      : 'border-transparent hover:border-gray-200 dark:hover:border-gray-600'
-                  }`}
-                  style={themeColor === color.value ? { borderColor: themeColor } : {}}
-                >
-                  <div 
-                    className={`w-10 h-10 rounded-full bg-gradient-to-br ${color.bg} shadow-lg`}
-                  />
-                  <span className="text-sm text-light-text dark:text-dark-text">{color.name}</span>
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setThemeModal(false)}
-              className="w-full mt-4 py-2 text-light-muted dark:text-dark-muted hover:text-light-text dark:hover:text-dark-text"
-            >
-              取消
-            </button>
-          </div>
-        </div>
+        <div className="fixed inset-0 z-40" onClick={() => setThemeModal(false)} />
       )}
     </div>
   )
