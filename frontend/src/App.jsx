@@ -69,6 +69,16 @@ function App() {
     }
   }, [isDark])
 
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape' && qualityModal.show) {
+        setQualityModal({ show: false, song: null })
+      }
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [qualityModal.show])
+
   const showToast = (message) => {
     setToast(message)
     setTimeout(() => setToast(null), 3000)
@@ -478,7 +488,7 @@ function App() {
             </button>
           </div>
           {/* 进度条 - 移动端也显示 */}
-          <div className="flex w-full items-center gap-1 md:gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <div className="flex w-full md:max-w-md md:mx-auto items-center gap-1 md:gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
             <span className="w-8 md:w-10 text-right">{formatTime(currentTime)}</span>
             <input
               type="range"
