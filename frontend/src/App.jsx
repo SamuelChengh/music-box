@@ -567,7 +567,8 @@ function App() {
         <div className="w-full md:w-1/2 lg:w-3/5 flex flex-col">
           {/* Player Info */}
           <div className="flex flex-col items-center p-6 bg-light-card dark:bg-dark-card">
-            <div className="w-48 h-48 mb-4 rounded-xl bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center shadow-lg">
+            <div className="w-48 h-48 mb-4 rounded-xl flex items-center justify-center shadow-lg"
+                  style={{ background: `linear-gradient(135deg, ${themeColor}, ${themeColor}99)` }}>
               {currentSong?.album_img ? (
                 <img src={currentSong.album_img} alt="cover" className="w-full h-full object-cover rounded-xl" />
               ) : (
