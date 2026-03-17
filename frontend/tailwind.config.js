@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#e94560',
+        primary: 'var(--color-primary)',
         dark: {
           bg: '#1a1a2e',
           card: '#16213e',

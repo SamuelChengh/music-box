@@ -9,11 +9,7 @@ app = Flask(__name__)
 CORS(app)
 
 SOURCES = [
-    'MiguMusicClient',
-    'NeteaseMusicClient',
-    'QQMusicClient',
-    'KuwoMusicClient',
-    'KugouMusicClient'
+    'NeteaseMusicClient'
 ]
 
 class MusicClientWrapper:
@@ -28,7 +24,7 @@ class MusicClientWrapper:
             
             init_cfg = {}
             for s in sources:
-                init_cfg[s] = {'search_size_per_source': 30}
+                init_cfg[s] = {'search_size_per_source': 10}
             
             client = musicdl.MusicClient(
                 music_sources=sources,
