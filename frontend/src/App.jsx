@@ -613,55 +613,55 @@ function App() {
       </div>
 
       {/* Bottom Player Bar */}
-      <div className="h-20 flex items-center gap-4 px-4 bg-light-card dark:bg-dark-card border-t border-gray-200 dark:border-gray-700">
+      <div className="h-20 flex items-center gap-2 md:gap-4 px-2 md:px-4 bg-light-card dark:bg-dark-card border-t border-gray-200 dark:border-gray-700">
         {/* Song Info */}
-        <div className="flex items-center gap-3 w-48 md:w-64">
+        <div className="flex items-center gap-2 md:gap-3 w-28 md:w-40 flex-shrink-0">
           {currentSong?.album_img ? (
-            <img src={currentSong.album_img} alt="cover" className="w-12 h-12 rounded" />
+            <img src={currentSong.album_img} alt="cover" className="w-10 h-10 md:w-12 md:h-12 rounded flex-shrink-0" />
           ) : (
-            <div className="w-12 h-12 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-              <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 md:w-6 md:h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
               </svg>
             </div>
           )}
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{currentSong?.name || '未选择歌曲'}</p>
+            <p className="truncate text-xs md:text-sm font-medium">{currentSong?.name || '未选择歌曲'}</p>
             <p className="truncate text-xs text-light-muted dark:text-dark-muted">{currentSong?.artist}</p>
           </div>
         </div>
 
         {/* Controls */}
-        <div className="flex-1 flex flex-col items-center">
-          <div className="flex items-center gap-4 mb-1">
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="flex items-center gap-2 md:gap-4 mb-1">
             <button onClick={playPrev} className="p-1 hover:scale-110 transition-transform">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-5 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
               </svg>
             </button>
             <button
               onClick={togglePlay}
-              className="w-10 h-10 rounded-full text-white flex items-center justify-center hover:scale-105 transition-transform"
+              className="w-10 h-10 md:w-12 md:h-12 rounded-full text-white flex items-center justify-center hover:scale-105 transition-transform"
               style={{ backgroundColor: themeColor }}
             >
               {isPlaying ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
                 </svg>
               ) : (
-                <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 md:w-5 md:h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z"/>
                 </svg>
               )}
             </button>
             <button onClick={playNext} className="p-1 hover:scale-110 transition-transform">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-5 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
               </svg>
             </button>
           </div>
-          <div className="w-full max-w-md flex items-center gap-2 text-xs text-light-muted dark:text-dark-muted">
-            <span>{formatTime(currentTime)}</span>
+          <div className="w-full max-w-[200px] md:max-w-md flex items-center gap-1 md:gap-2 text-xs text-light-muted dark:text-dark-muted">
+            <span className="w-8 md:w-10 text-right">{formatTime(currentTime)}</span>
             <input
               type="range"
               min={0}
@@ -671,12 +671,12 @@ function App() {
               className="flex-1 h-1"
               style={{ accentColor: themeColor }}
             />
-            <span>{formatTime(duration)}</span>
+            <span className="w-8 md:w-10">{formatTime(duration)}</span>
           </div>
         </div>
 
         {/* Volume & Quality */}
-        <div className="hidden md:flex items-center gap-3 w-40">
+        <div className="hidden md:flex items-center gap-2 w-40 flex-shrink-0 justify-end">
           <button onClick={() => setVolume(v => v > 0 ? 0 : 0.8)}>
             {volume === 0 ? (
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
