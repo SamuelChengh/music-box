@@ -251,17 +251,6 @@ function App() {
         
         {/* 搜索框 */}
         <div className="flex-1 flex items-center gap-1 md:gap-2 min-w-0">
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="搜索歌曲..."
-            className="flex-1 min-w-0 px-2 md:px-4 py-1.5 text-sm rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2"
-            style={{ '--tw-ring-color': themeColor }}
-          />
-          
           <select
             value={source}
             onChange={(e) => setSource(e.target.value)}
@@ -272,6 +261,17 @@ function App() {
               <option key={key} value={key}>{name}</option>
             ))}
           </select>
+          
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="搜索歌曲..."
+            className="flex-1 min-w-0 px-2 md:px-4 py-1.5 text-sm rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2"
+            style={{ '--tw-ring-color': themeColor }}
+          />
           
           <button
             onClick={handleSearch}
