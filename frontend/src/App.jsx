@@ -465,7 +465,7 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Left Sidebar - Search Results */}
-        <div className="w-full md:w-1/2 lg:w-1/2 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700">
+        <div className="w-full md:w-1/2 lg:w-1/2 flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-800">
             <span className="text-sm text-light-muted dark:text-dark-muted">
               {total > 0 ? `${(page-1)*10+1}-${Math.min(page*10, total)} / ${total} 首` : '搜索结果'}
@@ -481,16 +481,16 @@ function App() {
             )}
           </div>
           
-          <div ref={listRef} className="flex-1 overflow-y-auto">
+          <div ref={listRef} className="flex-1 overflow-y-auto min-h-0">
             {loading ? (
-              <div className="flex items-center justify-center h-40">
+              <div className="h-full flex items-center justify-center">
                 <svg className="w-8 h-8 animate-spin" fill="none" viewBox="0 0 24 24" style={{ color: themeColor }}>
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
               </div>
             ) : songs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 text-light-muted dark:text-dark-muted">
+              <div className="h-full flex flex-col items-center justify-center text-light-muted dark:text-dark-muted">
                 <svg className="w-16 h-16 mb-2" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                 </svg>
