@@ -1,91 +1,190 @@
 import os
+import time
 import requests
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
-from musicdl import musicdl
 from urllib.parse import quote
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 app = Flask(__name__)
 CORS(app)
 
 SOURCES = [
-    'NeteaseMusicClient'
+    'NeteaseMusicClient',
+    'MiguMusicClient',
+    'QQMusicClient',
+    'KuwoMusicClient',
+    'KugouMusicClient'
 ]
 
-class MusicClientWrapper:
-    def __init__(self):
-        self.search_cache = {}
-    
-    def search(self, keyword, page=1, page_size=10, source=None):
-        cache_key = f"{keyword}_{source}"
-        
-        if cache_key not in self.search_cache:
-            sources = [source] if source else SOURCES
-            
-            init_cfg = {}
-            for s in sources:
-                init_cfg[s] = {'search_size_per_source': 10}
-            
-            client = musicdl.MusicClient(
-                music_sources=sources,
-                init_music_clients_cfg=init_cfg
-            )
-            results = client.search(keyword=keyword)
-            
-            all_songs = []
-            for source_name, songs in results.items():
-                for song in songs:
-                    all_songs.append(self._normalize_song(song, source_name))
-            
-            all_songs = self._deduplicate(all_songs)
-            self.search_cache[cache_key] = all_songs
-        
-        all_songs = self.search_cache[cache_key]
-        total = len(all_songs)
-        start = (page - 1) * page_size
-        end = start + page_size
-        page_data = all_songs[start:end]
-        
-        return {
-            'songs': page_data,
-            'total': total,
-            'page': page,
-            'page_size': page_size
-        }
-    
-    def _normalize_song(self, song, source):
-        return {
-            'name': getattr(song, 'song_name', 'Unknown'),
-            'artist': getattr(song, 'singers', 'Unknown'),
-            'album': getattr(song, 'album', ''),
-            'duration': getattr(song, 'duration_s', 0),
-            'duration_str': getattr(song, 'duration', '00:00'),
-            'song_id': str(getattr(song, 'identifier', id(song))),
-            '_source': source,
-            'album_img': getattr(song, 'cover_url', None),
-            'quality': getattr(song, 'ext', 'mp3'),
-            'download_url': getattr(song, 'download_url', None),
-            'lyric': getattr(song, 'lyric', None)
-        }
-    
-    def _deduplicate(self, songs):
-        seen = {}
-        for song in songs:
-            key = f"{song.get('name', '')}-{song.get('artist', '')}"
-            if key not in seen:
-                seen[key] = song
-            else:
-                old_ext = seen[key].get('quality', 'mp3')
-                new_ext = song.get('quality', 'mp3')
-                if self._compare_quality(new_ext, old_ext):
-                    seen[key] = song
-        return list(seen.values())
-    
-    def _compare_quality(self, q1, q2):
-        order = {'mp3': 0, 'flac': 1, 'wav': 2}
-        return order.get(q1, 0) > order.get(q2, 0)
+API_SOURCES = {
+    'KuwoMusicClient': 'kuwo',
+    'MiguMusicClient': 'migu',
+    'QQMusicClient': 'qq'
+}
 
-music_client = MusicClientWrapper()
+API_URLS = {
+    'kuwo': 'https://kw-api.cenguigui.cn/',
+    'migu': 'https://api.xcvts.cn/api/music/migu',
+    'qq': 'https://tang.api.s01s.cn/music_open_api.php'
+}
+
+class SearchCache:
+    def __init__(self, ttl=3600):
+        self.cache = {}
+        self.ttl = ttl
+        self.lock = threading.Lock()
+    
+    def get(self, key):
+        with self.lock:
+            if key in self.cache:
+                data, timestamp = self.cache[key]
+                if time.time() - timestamp < self.ttl:
+                    return data
+                else:
+                    del self.cache[key]
+        return None
+    
+    def set(self, key, data):
+        with self.lock:
+            self.cache[key] = (data, time.time())
+
+search_cache = SearchCache(ttl=3600)
+
+def search_kuwo(keyword, page=1, page_size=10):
+    try:
+        url = API_URLS['kuwo']
+        params = {
+            'name': keyword,
+            'page': page,
+            'limit': page_size
+        }
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+        
+        if data.get('code') == 200:
+            songs = []
+            for item in data.get('data', []):
+                songs.append({
+                    'name': item.get('name', 'Unknown'),
+                    'artist': item.get('artist', 'Unknown'),
+                    'album': item.get('album', ''),
+                    'duration': 0,
+                    'duration_str': '00:00',
+                    'song_id': str(item.get('rid', item.get('vid', ''))),
+                    '_source': 'KuwoMusicClient',
+                    'album_img': item.get('pic', None),
+                    'quality': 'mp3',
+                    'download_url': item.get('url', None),
+                    'lyric': item.get('lrc', None)
+                })
+            return {'songs': songs, 'total': data.get('total', len(songs))}
+    except Exception as e:
+        print(f"Kuwo search error: {e}")
+    return None
+
+def search_migu(keyword, page=1, page_size=10):
+    try:
+        url = API_URLS['migu']
+        params = {
+            'gm': keyword,
+            'n': page,
+            'num': page_size,
+            'type': 'json'
+        }
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+        
+        if data.get('code') == 200:
+            songs = []
+            for item in data.get('data', []):
+                songs.append({
+                    'name': item.get('title', 'Unknown'),
+                    'artist': item.get('singer', 'Unknown'),
+                    'album': '',
+                    'duration': 0,
+                    'duration_str': '00:00',
+                    'song_id': str(item.get('n', '')),
+                    '_source': 'MiguMusicClient',
+                    'album_img': None,
+                    'quality': 'mp3',
+                    'download_url': None,
+                    'lyric': None
+                })
+            return {'songs': songs, 'total': len(songs)}
+    except Exception as e:
+        print(f"Migu search error: {e}")
+    return None
+
+def search_qq(keyword, page=1, page_size=10):
+    try:
+        url = API_URLS['qq']
+        params = {
+            'msg': keyword,
+            'type': 'json'
+        }
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+        
+        if isinstance(data, list):
+            songs = []
+            for item in data:
+                songs.append({
+                    'name': item.get('song_title', 'Unknown'),
+                    'artist': item.get('singer_name', 'Unknown'),
+                    'album': '',
+                    'duration': 0,
+                    'duration_str': '00:00',
+                    'song_id': str(item.get('song_mid', '')),
+                    '_source': 'QQMusicClient',
+                    'album_img': None,
+                    'quality': 'mp3',
+                    'download_url': None,
+                    'lyric': None
+                })
+            return {'songs': songs, 'total': len(songs)}
+    except Exception as e:
+        print(f"QQ search error: {e}")
+    return None
+
+API_SEARCH_FUNCTIONS = {
+    'KuwoMusicClient': search_kuwo,
+    'MiguMusicClient': search_migu,
+    'QQMusicClient': search_qq
+}
+
+def search_with_apis(keyword, page=1, page_size=10, source=None):
+    results = []
+    
+    if source and source in API_SEARCH_FUNCTIONS:
+        sources_to_try = [source]
+    else:
+        sources_to_try = ['KuwoMusicClient', 'MiguMusicClient', 'QQMusicClient']
+    
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {
+            executor.submit(API_SEARCH_FUNCTIONS[s], keyword, page, page_size): s 
+            for s in sources_to_try if s in API_SEARCH_FUNCTIONS
+        }
+        
+        for future in as_completed(futures, timeout=15):
+            try:
+                result = future.result()
+                if result and result.get('songs'):
+                    return result
+            except Exception as e:
+                continue
+    
+    return None
+
+def deduplicate_songs(songs):
+    seen = {}
+    for song in songs:
+        key = f"{song.get('name', '')}-{song.get('artist', '')}"
+        if key not in seen:
+            seen[key] = song
+    return list(seen.values())
 
 @app.route('/api/sources', methods=['GET'])
 def get_sources():
@@ -102,11 +201,30 @@ def search():
     if not keyword:
         return jsonify({'error': '关键词不能为空'}), 400
     
-    try:
-        result = music_client.search(keyword, page, page_size, source)
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    cache_key = f"{keyword}_{source}_{page}_{page_size}"
+    cached = search_cache.get(cache_key)
+    if cached:
+        return jsonify(cached)
+    
+    result = search_with_apis(keyword, page, page_size, source)
+    
+    if result:
+        songs = deduplicate_songs(result.get('songs', []))
+        total = len(songs)
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_data = songs[start:end]
+        
+        response = {
+            'songs': page_data,
+            'total': total,
+            'page': page,
+            'page_size': page_size
+        }
+        search_cache.set(cache_key, response)
+        return jsonify(response)
+    
+    return jsonify({'error': '搜索失败，请稍后重试'}), 500
 
 @app.route('/api/play', methods=['POST'])
 def play():
